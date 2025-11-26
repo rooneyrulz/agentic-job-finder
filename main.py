@@ -1,11 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import logging
 
 from app.core.config import get_settings
-from app.models.schemas import HealthResponse
+from app.models.schemas import HealthResponse, JobSearchRequest, JobSearchResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,6 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,6 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/", response_model=HealthResponse, tags=["Health"])
 async def root():
     """Root endpoint - API health check"""
@@ -48,7 +50,8 @@ async def root():
         message="Job Finder API is running",
         version="1.0.0"
     )
-    
+
+
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
     """Health check endpoint"""
@@ -57,6 +60,46 @@ async def health_check():
         message="All systems operational",
         version="1.0.0"
     )
+
+
+@app.post(
+    "/api/v1/jobs/search",
+    response_model=JobSearchResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Jobs"],
+    summary="Search and get AI-recommended jobs",
+    description="Submit a job search query and receive AI-curated job recommendations from LinkedIn and Glassdoor"
+)
+async def search_jobs(request: JobSearchRequest) -> JobSearchResponse | None:
+    """
+    Search for jobs and get AI-powered recommendations
+
+    Args:
+        request: Job search parameters including keywords, location, and preferences
+
+    Returns:
+        JobSearchResponse with top recommended jobs
+
+    Raises:
+        HTTPException: If search fails or invalid parameters
+    """
+    try:
+        logger.info(f"Received job search request: {request.keywords}")
+
+        return None
+
+    except ValueError as ve:
+        logger.error(f"Validation error: {str(ve)}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(ve)
+        )
+    except Exception as e:
+        logger.error(f"Error processing job search: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while processing job search"
+        )
 
 if __name__ == "__main__":
     uvicorn.run(
