@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 import logging
 
+from app.core.config import get_settings
 from app.models.schemas import HealthResponse
 
 logging.basicConfig(
@@ -12,18 +13,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+settings = get_settings()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown events"""
     logger.info("Starting Job Finder API...")
-    logger.info("Environment: Development")
+    logger.info(f"Environment: {settings.ENVIRONMENT}")
     yield
     logger.info("Shutting down Job Finder API...")
 
 app = FastAPI(
     title="Job Finder API",
     description="AI-powered job search and recommendation API using BrightData and LangGraph",
-    version="1.0.0",
+    version=settings.APP_VERSION,
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
@@ -58,8 +61,8 @@ async def health_check():
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG,
         log_level="info"
     )
