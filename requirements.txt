@@ -1,0 +1,21 @@
+# Core Framework
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# LangChain & LangGraph
+langchain
+langchain-core
+langchain-groq
+langgraph
+
+# Groq LLM
+groq
+
+# Data Processing
+python-dotenv
+python-multipart
+
+# Logging & Monitoring
+python-json-logger
