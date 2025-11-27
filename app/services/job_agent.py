@@ -131,8 +131,38 @@ class JobFinderAgent:
         """Node 3: Analyze jobs with LLM"""
         logger.info("Node 3: Analyzing jobs with LLM")
 
-        # Implementation of job analysis
-        return state
+        if state.get("error") or not state.get("raw_jobs"):
+            return state
+
+        try:
+            # Prepare search criteria for LLM
+            search_criteria = {
+                "keywords": state["keywords"],
+                "location": state["location"],
+                "country": state.get("country", "any"),
+                "remote": state.get("remote", "any"),
+                "job_type": state.get("job_type", "any"),
+                "experience_level": state.get("experience_level", "any"),
+                "preferences": state.get("user_preferences", {})
+            }
+
+            # Analyze jobs with LLM
+            analyzed = await self.llm_service.analyze_jobs_batch(
+                jobs=state["raw_jobs"],
+                search_criteria=search_criteria,
+                limit=state["limit"]
+            )
+
+            state["analyzed_jobs"] = analyzed
+            state["search_metadata"]["analyzed_count"] = len(analyzed)
+
+            logger.info(f"Analyzed {len(analyzed)} jobs")
+            return state
+
+        except Exception as e:
+            logger.error(f"Analysis failed: {str(e)}")
+            state["error"] = f"Analysis failed: {str(e)}"
+            return state
 
     async def _format_response_node(self, state: JobSearchState) -> JobSearchState:
         """Node 4: Format final response"""
