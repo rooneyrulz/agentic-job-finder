@@ -101,8 +101,31 @@ class JobFinderAgent:
         """Node 2: Scrape jobs from BrightData sources"""
         logger.info("Node 2: Scraping jobs from sources")
 
-        # Implementation of job scraping
-        return state
+        if state.get("error"):
+            return state
+
+        try:
+            # Determine how many jobs to scrape per source
+            limit_per_source = state["limit"] // 2
+
+            # Scrape from all sources
+            raw_jobs = await self.scraper.scrape_all_sources(
+                keywords=state["keywords"],
+                location=state["location"],
+                limit_per_source=limit_per_source
+            )
+
+            state["raw_jobs"] = raw_jobs
+            state["search_metadata"]["sources"] = ["LinkedIn", "Glassdoor"]
+            state["search_metadata"]["total_scraped"] = len(raw_jobs)
+
+            logger.info(f"Scraped {len(raw_jobs)} jobs")
+            return state
+
+        except Exception as e:
+            logger.error(f"Scraping failed: {str(e)}")
+            state["error"] = f"Scraping failed: {str(e)}"
+            return state
 
     async def _analyze_jobs_node(self, state: JobSearchState) -> JobSearchState:
         """Node 3: Analyze jobs with LLM"""
