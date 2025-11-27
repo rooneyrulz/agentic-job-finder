@@ -42,7 +42,7 @@ class JobSearchRequest(BaseModel):
         examples=["Python Developer", "Machine Learning Engineer"]
     )
     location: Optional[str] = Field(
-        default="New York, NY",
+        default="Remote",
         max_length=100,
         description="Preferred job location (e.g: city, state, or remote)",
         examples=["San Francisco, CA", "Remote"]

@@ -6,6 +6,7 @@ import logging
 
 from app.core.config import get_settings
 from app.models.schemas import HealthResponse, JobSearchRequest, JobSearchResponse
+from app.services.job_agent import JobFinderAgent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,7 +87,24 @@ async def search_jobs(request: JobSearchRequest) -> JobSearchResponse | None:
     try:
         logger.info(f"Received job search request: {request.keywords}")
 
-        return None
+        # Initialize agent
+        agent = JobFinderAgent()
+
+        # Execute agentic workflow
+        results = await agent.search_and_recommend(
+            keywords=request.keywords,
+            location=request.location,
+            country=request.country,
+            remote=request.remote,
+            job_type=request.job_type,
+            experience_level=request.experience_level,
+            limit=request.limit,
+            user_preferences=request.preferences
+        )
+
+        logger.info(f"Successfully found {len(results.jobs)} jobs")
+
+        return results
 
     except ValueError as ve:
         logger.error(f"Validation error: {str(ve)}")

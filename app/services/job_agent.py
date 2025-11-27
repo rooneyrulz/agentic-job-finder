@@ -220,8 +220,83 @@ class JobFinderAgent:
             state["error"] = f"Response formatting failed: {str(e)}"
             return state
 
-    async def search_and_recommend() -> JobSearchResponse:
-        """Execute the job search workflow and return recommendations"""
+    async def search_and_recommend(
+        self,
+        keywords: str,
+        location: str,
+        country: str,
+        job_type: str,
+        experience_level: str,
+        remote: str,
+        limit: int = 10,
+        user_preferences: Optional[Dict[str, Any]] = None
+    ) -> JobSearchResponse:
+        """
+        Execute the complete job search and recommendation workflow
 
-        # Implementation of workflow execution
-        pass
+        Args:
+            keywords: Job search keywords
+            location: Desired location
+            job_type: Type of employment
+            experience_level: Experience level
+            limit: Maximum results
+            user_preferences: Additional user preferences
+
+        Returns:
+            JobSearchResponse with recommendations
+        """
+        logger.info(f"Starting job search workflow for: {keywords}")
+
+        start_time = datetime.utcnow()
+
+        # Prepare initial state
+        initial_state: JobSearchState = {
+            "keywords": keywords,
+            "location": location,
+            "country": country,
+            "job_type": job_type,
+            "experience_level": experience_level,
+            "remote": remote,
+            "limit": limit,
+            "user_preferences": user_preferences,
+            "raw_jobs": [],
+            "analyzed_jobs": [],
+            "final_recommendations": [],
+            "search_metadata": {},
+            "error": None,
+            "processing_time": 0.0
+        }
+
+        try:
+            # Execute the workflow
+            final_state = await self.workflow.ainvoke(initial_state)
+
+            # Build response
+            response = JobSearchResponse(
+                success=final_state.get("error") is None,
+                query=keywords,
+                total_found=len(final_state.get("final_recommendations", [])),
+                jobs=final_state.get("final_recommendations", []),
+                search_metadata=final_state.get("search_metadata", {}),
+                timestamp=datetime.utcnow()
+            )
+
+            logger.info(
+                f"Workflow completed successfully: {response.total_found} jobs")
+            return response
+
+        except Exception as e:
+            logger.error(f"Workflow execution failed: {str(e)}", exc_info=True)
+
+            # Return error response
+            return JobSearchResponse(
+                success=False,
+                query=keywords,
+                total_found=0,
+                jobs=[],
+                search_metadata={
+                    "error": str(e),
+                    "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds()
+                },
+                timestamp=datetime.utcnow()
+            )
