@@ -11,6 +11,8 @@ from app.models.schemas import JobSearchResponse, JobRecommendation
 logger = logging.getLogger(__name__)
 
 # Define the agent state
+
+
 class JobSearchState(TypedDict):
     """State for the job search agent workflow"""
     # Input
@@ -48,16 +50,16 @@ class JobFinderAgent:
 
         # Create the state graph
         workflow = StateGraph(JobSearchState)
-        
+
         # Add nodes to the workflow
         workflow.add_node("validate_input", self._validate_input_node)
         workflow.add_node("scrape_jobs", self._scrape_jobs_node)
         workflow.add_node("analyze_jobs", self._analyze_jobs_node)
         workflow.add_node("format_response", self._format_response_node)
-        
+
         # Define the workflow edges
         workflow.set_entry_point("validate_input")
-        
+
         workflow.add_edge("validate_input", "scrape_jobs")
         workflow.add_edge("scrape_jobs", "analyze_jobs")
         workflow.add_edge("analyze_jobs", "format_response")
@@ -69,8 +71,31 @@ class JobFinderAgent:
         """Node 1: Validate and normalize input parameters"""
         logger.info("Node 1: Validating input")
 
-        # Implementation of input validation
-        return state
+        try:
+            # Normalize inputs
+            state["keywords"] = state["keywords"].strip()
+            state["location"] = state.get("location", "Remote").strip()
+            state["limit"] = min(state.get("limit", 10), 50)
+
+            # Initialize state
+            state["raw_jobs"] = []
+            state["analyzed_jobs"] = []
+            state["final_recommendations"] = []
+            state["search_metadata"] = {
+                "start_time": datetime.utcnow().isoformat(),
+                "sources": [],
+                "filters_applied": []
+            }
+            state["error"] = None
+
+            logger.info(
+                f"Input validated: {state['keywords']} in {state['location']}")
+            return state
+
+        except Exception as e:
+            logger.error(f"Input validation failed: {str(e)}")
+            state["error"] = str(e)
+            return state
 
     async def _scrape_jobs_node(self, state: JobSearchState) -> JobSearchState:
         """Node 2: Scrape jobs from BrightData sources"""
