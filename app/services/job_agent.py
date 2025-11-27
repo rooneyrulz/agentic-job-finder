@@ -48,6 +48,20 @@ class JobFinderAgent:
 
         # Create the state graph
         workflow = StateGraph(JobSearchState)
+        
+        # Add nodes to the workflow
+        workflow.add_node("validate_input", self._validate_input_node)
+        workflow.add_node("scrape_jobs", self._scrape_jobs_node)
+        workflow.add_node("analyze_jobs", self._analyze_jobs_node)
+        workflow.add_node("format_response", self._format_response_node)
+        
+        # Define the workflow edges
+        workflow.set_entry_point("validate_input")
+        
+        workflow.add_edge("validate_input", "scrape_jobs")
+        workflow.add_edge("scrape_jobs", "analyze_jobs")
+        workflow.add_edge("analyze_jobs", "format_response")
+        workflow.add_edge("format_response", END)
 
         return workflow.compile()
 
