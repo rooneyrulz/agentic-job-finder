@@ -168,8 +168,57 @@ class JobFinderAgent:
         """Node 4: Format final response"""
         logger.info("Node 4: Formatting response")
 
-        # Implementation of response formatting
-        return state
+        if state.get("error"):
+            return state
+
+        try:
+            recommendations = []
+
+            for job, analysis in state["analyzed_jobs"]:
+                recommendation = JobRecommendation(
+                    job_id=job["job_id"],
+                    title=job["title"],
+                    company=job["company"],
+                    location=job["location"],
+                    country=job.get("country"),
+                    job_type=job["job_type"],
+                    experience_level=job.get("experience_level"),
+                    remote=job.get("remote"),
+                    job_employment_type=job.get("job_employment_type"),
+                    job_industries=job.get("job_industries"),
+                    job_function=job.get("job_function"),
+                    job_seniority_level=job.get("job_seniority_level"),
+                    job_summary=job["job_summary"],
+                    employee_benefit_reviews=job["employee_benefit_reviews"],
+                    salary_range=job.get("job_base_pay_range"),
+                    posted_date=job.get("posted_date"),
+                    apply_url=job["apply_url"],
+                    source=job["source"],
+                    match_score=round(analysis.relevance_score, 2),
+                    match_reason=analysis.match_explanation,
+                    key_highlights=analysis.key_strengths,
+                    potential_concerns=analysis.potential_concerns,
+                    recommendation=analysis.recommendation
+                )
+                recommendations.append(recommendation)
+
+            state["final_recommendations"] = recommendations
+
+            # Calculate processing time
+            start_time = datetime.fromisoformat(
+                state["search_metadata"]["start_time"]
+            )
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            state["search_metadata"]["processing_time_seconds"] = round(
+                processing_time, 2)
+
+            logger.info(f"Response formatted with {len(recommendations)} jobs")
+            return state
+
+        except Exception as e:
+            logger.error(f"Response formatting failed: {str(e)}")
+            state["error"] = f"Response formatting failed: {str(e)}"
+            return state
 
     async def search_and_recommend() -> JobSearchResponse:
         """Execute the job search workflow and return recommendations"""

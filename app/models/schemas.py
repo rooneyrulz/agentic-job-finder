@@ -109,14 +109,36 @@ class JobRecommendation(BaseModel):
     company: str = Field(..., description="Company name")
     location: str = Field(..., description="Job location")
     job_type: str = Field(..., description="Employment type")
-    description: str = Field(..., description="Job description")
-    requirements: List[str] = Field(
+    experience_level: str = Field(..., description="Experience level")
+    job_industries: str = Field(..., description="Job industries")
+    job_summary: str = Field(..., description="Job description")
+    employee_benefit_reviews: Optional[List[str]] = Field(
         default_factory=list,
-        description="Job requirements and qualifications"
+        description="Employee benefit reviews if available"
     )
     salary_range: Optional[str] = Field(
         None,
         description="Salary range if available"
+    )
+    country: Optional[str] = Field(
+        None,
+        description="Country if available"
+    )
+    remote: Optional[str] = Field(
+        None,
+        description="Work arrangement if available"
+    )
+    job_employment_type: Optional[str] = Field(
+        None,
+        description="Employment type if available"
+    )
+    job_function: Optional[str] = Field(
+        None,
+        description="Job function if available"
+    )
+    job_seniority_level: Optional[str] = Field(
+        None,
+        description="Seniority level if available"
     )
     posted_date: Optional[str] = Field(
         None,
@@ -137,6 +159,14 @@ class JobRecommendation(BaseModel):
     key_highlights: List[str] = Field(
         default_factory=list,
         description="Key highlights of the job posting"
+    )
+    potential_concerns: List[str] = Field(
+        default_factory=list,
+        description="Any potential concerns or mismatches"
+    )
+    recommendation: str = Field(
+        ...,
+        description="Recommend: 'highly_recommended', 'recommended', 'consider', or 'not_recommended'"
     )
 
     class Config:
