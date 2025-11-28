@@ -51,9 +51,9 @@ class BrightDataScraper:
             logger.info(f"🚀 Triggering snapshot for dataset: {dataset_id}")
             response = requests.post(
                 self.trigger_url,
+                headers=self.headers,
                 params=params,
                 json=data,
-                headers=self.headers,
                 timeout=30
             )
             response.raise_for_status()
@@ -209,7 +209,7 @@ class BrightDataScraper:
             {
                 "keyword": keywords,
                 "location": location,
-                "limit": limit
+                # "limit": limit
             }
         ]
 
@@ -253,7 +253,7 @@ class BrightDataScraper:
             {
                 "keyword": keywords,
                 "location": location,
-                "limit": limit
+                # "limit": limit
             }
         ]
 

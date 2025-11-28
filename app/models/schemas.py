@@ -289,21 +289,3 @@ class LLMJobAnalysis(BaseModel):
             }
         }
 
-
-class LLMBatchAnalysis(BaseModel):
-    """Schema for batch job analysis by LLM"""
-    total_analyzed: int = Field(..., ge=0)
-    analyses: List[LLMJobAnalysis] = Field(default_factory=list)
-    top_recommendation_indices: List[int] = Field(
-        default_factory=list,
-        description="Indices of top recommended jobs in order"
-    )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "total_analyzed": 25,
-                "analyses": [],
-                "top_recommendation_indices": [0, 3, 5, 8, 10, 12, 15, 18, 20, 22]
-            }
-        }
