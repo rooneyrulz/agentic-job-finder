@@ -46,7 +46,7 @@ class BrightDataScraper:
             "discover_by": "keyword",
             "limit_per_input": "5",
         }
-
+        
         try:
             logger.info(f"🚀 Triggering snapshot for dataset: {dataset_id}")
             response = requests.post(

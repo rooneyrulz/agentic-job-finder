@@ -7,6 +7,8 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage
 
 from app.models.schemas import JobSearchResponse, JobRecommendation
+from app.services.llm_service import JobAnalysisLLM
+from app.services.scraper import BrightDataScraper
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +44,8 @@ class JobFinderAgent:
     """LangGraph agent for orchestrating job search workflow"""
 
     def __init__(self):
-        self.scraper = None  # Initialize BrightData scraper
-        self.llm_service = None  # Initialize LLM service
+        self.scraper = BrightDataScraper()
+        self.llm_service = JobAnalysisLLM()
         self.workflow = self._build_workflow()
 
     def _build_workflow(self) -> StateGraph:
