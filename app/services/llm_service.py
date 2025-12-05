@@ -20,7 +20,7 @@ class JobAnalysisLLM:
             model_name=settings.GROQ_MODEL,
             temperature=settings.GROQ_TEMPERATURE,
             max_tokens=settings.GROQ_MAX_TOKENS,
-        )
+        )  # .with_structured_output(LLMJobAnalysis)
 
         self.parser = JsonOutputParser(pydantic_object=LLMJobAnalysis)
 
@@ -66,9 +66,7 @@ Provide your analysis in valid JSON format with no additional text or markdown.
         return ChatPromptTemplate.from_template(template)
 
     async def analyze_job(
-        self,
-        job: Dict[str, Any],
-        search_criteria: Dict[str, Any]
+        self, job: Dict[str, Any], search_criteria: Dict[str, Any]
     ) -> LLMJobAnalysis:
         """
         Analyze a single job posting using LLM
@@ -98,11 +96,13 @@ Provide your analysis in valid JSON format with no additional text or markdown.
                     "job_employment_type": lambda x: x["job"]["job_type"],
                     "job_industries": lambda x: x["job"]["job_industries"],
                     "job_function": lambda x: x["job"]["job_function"],
-                    "job_seniority_level": lambda x: x["job"]["seniority_level"],
-                    "job_base_pay_range": lambda x: x["job"]["base_pay_range"],
+                    "job_seniority_level": lambda x: x["job"]["job_seniority_level"],
+                    "job_base_pay_range": lambda x: x["job"]["job_base_pay_range"],
                     # Truncate
                     "job_summary": lambda x: x["job"]["job_summary"][:1000],
-                    "employee_benefit_reviews": lambda x: x["job"]["employee_benefit_reviews"],
+                    "employee_benefit_reviews": lambda x: x["job"][
+                        "employee_benefit_reviews"
+                    ],
                     "format_instructions": lambda x: self.parser.get_format_instructions(),
                 }
                 | prompt
@@ -116,22 +116,21 @@ Provide your analysis in valid JSON format with no additional text or markdown.
             return LLMJobAnalysis(**result)
 
         except Exception as e:
-            logger.error(
-                f"LLM analysis failed for job {job.get('job_id')}: {str(e)}")
+            logger.error(f"LLM analysis failed for job {job.get('job_id')}: {str(e)}")
             # Return default analysis if LLM fails
             return LLMJobAnalysis(
                 relevance_score=50.0,
                 match_explanation="Unable to perform detailed analysis",
                 key_strengths=["Job posting available"],
                 potential_concerns=["Analysis unavailable"],
-                recommendation="consider"
+                recommendation="consider",
             )
 
     async def analyze_jobs_batch(
         self,
         jobs: List[Dict[str, Any]],
         search_criteria: Dict[str, Any],
-        limit: int = 10
+        limit: int = 10,
     ) -> List[tuple[Dict[str, Any], LLMJobAnalysis]]:
         """
         Analyze multiple jobs and return top recommendations

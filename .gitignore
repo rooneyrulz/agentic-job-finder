@@ -4,6 +4,7 @@ Glassdoor.py
 Glassdoor-response.json
 LinkedIn.py
 LinkedIn-response.json
+jobs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
