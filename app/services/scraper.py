@@ -1,7 +1,10 @@
 import requests
 import asyncio
+import json
 import time
 import logging
+from pathlib import Path
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor
 
@@ -21,13 +24,11 @@ class BrightDataScraper:
         self.download_url = settings.BRIGHTDATA_DOWNLOAD_URL
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
     def _trigger_snapshot(
-        self,
-        dataset_id: str,
-        data: List[Dict[str, Any]]
+        self, dataset_id: str, data: List[Dict[str, Any]]
     ) -> Optional[str]:
         """
         Trigger a BrightData snapshot and return snapshot_id
@@ -46,7 +47,7 @@ class BrightDataScraper:
             "discover_by": "keyword",
             "limit_per_input": "5",
         }
-        
+
         try:
             logger.info(f"🚀 Triggering snapshot for dataset: {dataset_id}")
             response = requests.post(
@@ -54,11 +55,12 @@ class BrightDataScraper:
                 headers=self.headers,
                 params=params,
                 json=data,
-                timeout=30
+                timeout=30,
             )
             response.raise_for_status()
 
             result = response.json()
+            print("Triger Snapshot: ", result)
             snapshot_id = result.get("snapshot_id")
 
             if snapshot_id:
@@ -73,10 +75,7 @@ class BrightDataScraper:
             return None
 
     def _poll_snapshot_status(
-        self,
-        snapshot_id: str,
-        max_attempts: int = 60,
-        delay: int = 5
+        self, snapshot_id: str, max_attempts: int = 60, delay: int = 5
     ) -> bool:
         """
         Poll snapshot status until ready or failed
@@ -94,10 +93,10 @@ class BrightDataScraper:
         for attempt in range(max_attempts):
             try:
                 logger.info(
-                    f"⏳ Checking snapshot progress... (attempt {attempt + 1}/{max_attempts})")
+                    f"⏳ Checking snapshot progress... (attempt {attempt + 1}/{max_attempts})"
+                )
 
-                response = requests.get(
-                    progress_url, headers=self.headers, timeout=10)
+                response = requests.get(progress_url, headers=self.headers, timeout=10)
                 response.raise_for_status()
 
                 progress_data = response.json()
@@ -124,9 +123,7 @@ class BrightDataScraper:
         return False
 
     def _download_snapshot(
-        self,
-        snapshot_id: str,
-        format: str = "json"
+        self, snapshot_id: str, format: str = "json"
     ) -> Optional[List[Dict[str, Any]]]:
         """
         Download completed snapshot data
@@ -143,8 +140,7 @@ class BrightDataScraper:
         try:
             logger.info("📥 Downloading snapshot data...")
 
-            response = requests.get(
-                download_url, headers=self.headers, timeout=30)
+            response = requests.get(download_url, headers=self.headers, timeout=30)
             response.raise_for_status()
 
             data = response.json()
@@ -158,9 +154,7 @@ class BrightDataScraper:
             return None
 
     def _trigger_and_download(
-        self,
-        dataset_id: str,
-        data: List[Dict[str, Any]]
+        self, dataset_id: str, data: List[Dict[str, Any]]
     ) -> Optional[List[Dict[str, Any]]]:
         """
         Complete workflow: trigger → poll → download
@@ -185,10 +179,7 @@ class BrightDataScraper:
         return self._download_snapshot(snapshot_id)
 
     def scrape_linkedin_jobs(
-        self,
-        keywords: str,
-        location: str = "Remote",
-        limit: int = 5
+        self, keywords: str, location: str = "Remote", limit: int = 5
     ) -> List[Dict[str, Any]]:
         """
         Scrape job listings from LinkedIn via BrightData
@@ -229,10 +220,7 @@ class BrightDataScraper:
             return []
 
     def scrape_glassdoor_jobs(
-        self,
-        keywords: str,
-        location: str = "Remote",
-        limit: int = 5
+        self, keywords: str, location: str = "Remote", limit: int = 5
     ) -> List[Dict[str, Any]]:
         """
         Scrape job listings from Glassdoor via BrightData
@@ -273,10 +261,7 @@ class BrightDataScraper:
             return []
 
     async def scrape_all_sources(
-        self,
-        keywords: str,
-        location: str = "Remote",
-        limit_per_source: int = 5
+        self, keywords: str, location: str = "Remote", limit_per_source: int = 5
     ) -> List[Dict[str, Any]]:
         """
         Scrape jobs from all sources concurrently
@@ -299,21 +284,19 @@ class BrightDataScraper:
                 self.scrape_linkedin_jobs,
                 keywords,
                 location,
-                limit_per_source
+                limit_per_source,
             )
             glassdoor_future = loop.run_in_executor(
                 executor,
                 self.scrape_glassdoor_jobs,
                 keywords,
                 location,
-                limit_per_source
+                limit_per_source,
             )
 
             # Wait for both to complete
             linkedin_jobs, glassdoor_jobs = await asyncio.gather(
-                linkedin_future,
-                glassdoor_future,
-                return_exceptions=True
+                linkedin_future, glassdoor_future, return_exceptions=True
             )
 
         # Combine results
@@ -330,9 +313,64 @@ class BrightDataScraper:
             logger.error(f"Glassdoor scraping error: {str(glassdoor_jobs)}")
 
         logger.info(f"✅ Total jobs scraped: {len(all_jobs)}")
+
+        # Save to JSON file
+        if all_jobs:
+            self._save_jobs_to_json(all_jobs, keywords, location)
+
         return all_jobs
 
-    def _parse_linkedin_response(self, raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _save_jobs_to_json(
+        self, jobs: List[Dict[str, Any]], keywords: str, location: str
+    ) -> None:
+        """
+        Save scraped jobs to JSON file in jobs/ directory
+
+        Args:
+            jobs: List of job dictionaries
+            keywords: Search keywords (for filename)
+            location: Job location (for filename)
+        """
+        try:
+            # Create jobs directory if it doesn't exist
+            jobs_dir = Path("jobs")
+            jobs_dir.mkdir(exist_ok=True)
+
+            # Create filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Clean keywords for filename (remove spaces and special chars)
+            clean_keywords = "".join(c if c.isalnum() else "_" for c in keywords)
+            clean_location = "".join(c if c.isalnum() else "_" for c in location)
+
+            filename = f"{clean_keywords}_{clean_location}_{timestamp}.json"
+            filepath = jobs_dir / filename
+
+            # Prepare data with metadata
+            output_data = {
+                "metadata": {
+                    "keywords": keywords,
+                    "location": location,
+                    "total_jobs": len(jobs),
+                    "sources": list(set(job.get("source", "Unknown") for job in jobs)),
+                    "scraped_at": datetime.now().isoformat(),
+                    "timestamp": timestamp,
+                },
+                "jobs": jobs,
+            }
+
+            # Write to JSON file with pretty formatting
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"💾 Saved {len(jobs)} jobs to: {filepath}")
+
+        except Exception as e:
+            logger.error(f"❌ Error saving jobs to JSON: {str(e)}")
+            # Don't raise exception - just log it (saving is optional)
+
+    def _parse_linkedin_response(
+        self, raw_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Parse BrightData LinkedIn response into standardized format"""
         jobs = []
 
@@ -343,21 +381,32 @@ class BrightDataScraper:
                     "title": item.get("job_title", ""),
                     "company": item.get("company_name", ""),
                     "location": item.get("job_location", ""),
-                    "country": item.get("country", item.get("discovery_input", {}).get("country", "")),
+                    "country": item.get(
+                        "country", item.get("discovery_input", {}).get("country", "")
+                    ),
                     "job_type": item.get("discovery_input", {}).get("job_type", ""),
-                    "experience_level": item.get("discovery_input", {}).get("experience_level", ""),
+                    "experience_level": item.get("discovery_input", {}).get(
+                        "experience_level", ""
+                    ),
                     "remote": item.get("discovery_input", {}).get("remote", ""),
                     "job_employment_type": item.get("job_employment_type", ""),
-                    "job_summary": item.get("job_summary", item.get("job_overview", "")),
-                    "job_industries": item.get("job_industries", item.get("company_industry", item.get("company_sector", ""))),
+                    "job_summary": item.get(
+                        "job_summary", item.get("job_overview", "")
+                    ),
+                    "job_industries": item.get(
+                        "job_industries",
+                        item.get("company_industry", item.get("company_sector", "")),
+                    ),
                     "job_function": item.get("job_function", ""),
                     "job_seniority_level": item.get("job_seniority_level", ""),
                     "job_base_pay_range": item.get("job_base_pay_range", ""),
                     "posted_date": item.get("job_posted_date", ""),
                     "apply_url": item.get("url", item.get("job_url", "")),
-                    "employee_benefit_reviews": item.get("employee_benefit_reviews", []),
+                    "employee_benefit_reviews": item.get(
+                        "employee_benefit_reviews", []
+                    ),
                     "source": "LinkedIn",
-                    "raw_data": item
+                    "raw_data": item,
                 }
                 jobs.append(job)
             except Exception as e:
@@ -366,32 +415,45 @@ class BrightDataScraper:
 
         return jobs
 
-    def _parse_glassdoor_response(self, raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _parse_glassdoor_response(
+        self, raw_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Parse BrightData Glassdoor response into standardized format"""
         jobs = []
 
         for item in raw_data:
             try:
                 job = {
-                    "job_id": f"glassdoor_{item.get('job_id', '')}",
+                    "job_id": f"glassdoor_{item.get('job_posting_id', item.get('job_id', ''))}",
                     "title": item.get("job_title", ""),
                     "company": item.get("company_name", ""),
                     "location": item.get("job_location", ""),
-                    "country": item.get("country", item.get("discovery_input", {}).get("country", "")),
+                    "country": item.get(
+                        "country", item.get("discovery_input", {}).get("country", "")
+                    ),
                     "job_type": item.get("discovery_input", {}).get("job_type", ""),
-                    "experience_level": item.get("discovery_input", {}).get("experience_level", ""),
+                    "experience_level": item.get("discovery_input", {}).get(
+                        "experience_level", ""
+                    ),
                     "remote": item.get("discovery_input", {}).get("remote", ""),
                     "job_employment_type": item.get("job_employment_type", ""),
-                    "job_summary": item.get("job_description", item.get("job_overview", "")),
-                    "job_industries": item.get("job_industries", item.get("company_industry", item.get("company_sector", ""))),
+                    "job_summary": item.get(
+                        "job_description", item.get("job_overview", "")
+                    ),
+                    "job_industries": item.get(
+                        "job_industries",
+                        item.get("company_industry", item.get("company_sector", "")),
+                    ),
                     "job_function": item.get("job_function", ""),
                     "job_seniority_level": item.get("job_seniority_level", ""),
                     "job_base_pay_range": item.get("salary_estimate", ""),
                     "posted_date": item.get("job_posted_date", ""),
                     "apply_url": item.get("url", item.get("job_url", "")),
-                    "employee_benefit_reviews": item.get("employee_benefit_reviews", []),
+                    "employee_benefit_reviews": item.get(
+                        "employee_benefit_reviews", []
+                    ),
                     "source": "Glassdoor",
-                    "raw_data": item
+                    "raw_data": item,
                 }
                 jobs.append(job)
             except Exception as e:

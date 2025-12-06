@@ -6,6 +6,7 @@ from datetime import datetime
 
 class JobType(str, Enum):
     """Job type enumeration"""
+
     FULL_TIME = "full_time"
     PART_TIME = "part_time"
     CONTRACT = "contract"
@@ -15,6 +16,7 @@ class JobType(str, Enum):
 
 class ExperienceLevel(str, Enum):
     """Experience level enumeration"""
+
     ENTRY = "entry"
     JUNIOR = "junior"
     MID = "mid"
@@ -26,6 +28,7 @@ class ExperienceLevel(str, Enum):
 
 class WorkArrangment(str, Enum):
     """Work arrangment enumeration"""
+
     REMOTE = "remote"
     HYBRID = "hybrid"
     ONSITE = "onsite"
@@ -34,49 +37,46 @@ class WorkArrangment(str, Enum):
 
 class JobSearchRequest(BaseModel):
     """Request schema for job search"""
+
     keywords: str = Field(
         ...,
         min_length=2,
         max_length=200,
         description="Job search keywords (e.g., 'Python Developer', 'Data Scientist')",
-        examples=["Python Developer", "Machine Learning Engineer"]
+        examples=["Python Developer", "Machine Learning Engineer"],
     )
     location: Optional[str] = Field(
         default="Remote",
         max_length=100,
         description="Preferred job location (e.g: city, state, or remote)",
-        examples=["San Francisco, CA", "Remote"]
+        examples=["San Francisco, CA", "Remote"],
     )
     country: Optional[str] = Field(
         default="US",
         max_length=100,
         description="Two letters country code (eg: US, UK, CA, FR)",
-        examples=["US", "UK", "CA"]
+        examples=["US", "UK", "CA"],
     )
     job_type: JobType = Field(
         default=JobType.ANY,
-        description="Type of employment (eg: full-time, part-time, contract)"
+        description="Type of employment (eg: full-time, part-time, contract)",
     )
     experience_level: ExperienceLevel = Field(
-        default=ExperienceLevel.ANY,
-        description="Required experience level"
+        default=ExperienceLevel.ANY, description="Required experience level"
     )
     remote: WorkArrangment = Field(
         default=WorkArrangment.ANY,
-        description="Work arrangement preference (eg: remote, hybrid, onsite)"
+        description="Work arrangement preference (eg: remote, hybrid, onsite)",
     )
     limit: int = Field(
-        default=10,
-        ge=1,
-        le=50,
-        description="Maximum number of jobs to return"
+        default=10, ge=1, le=50, description="Maximum number of jobs to return"
     )
     preferences: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Additional user preferences (skills, salary range, etc.)"
+        description="Additional user preferences (skills, salary range, etc.)",
     )
 
-    @field_validator('keywords')
+    @field_validator("keywords")
     @classmethod
     def validate_keywords(cls, v: str) -> str:
         """Validate and sanitize keywords"""
@@ -96,14 +96,15 @@ class JobSearchRequest(BaseModel):
                 "preferences": {
                     "min_salary": 120000,
                     "required_skills": ["Python", "FastAPI", "Docker"],
-                    "exclude_companies": []
-                }
+                    "exclude_companies": [],
+                },
             }
         }
 
 
 class JobRecommendation(BaseModel):
     """Individual job recommendation schema"""
+
     job_id: str = Field(..., description="Unique job identifier")
     title: str = Field(..., description="Job title")
     company: str = Field(..., description="Company name")
@@ -113,60 +114,36 @@ class JobRecommendation(BaseModel):
     job_industries: str = Field(..., description="Job industries")
     job_summary: str = Field(..., description="Job description")
     employee_benefit_reviews: Optional[List[str]] = Field(
-        default_factory=list,
-        description="Employee benefit reviews if available"
+        default_factory=list, description="Employee benefit reviews if available"
     )
-    salary_range: Optional[str] = Field(
-        None,
-        description="Salary range if available"
-    )
-    country: Optional[str] = Field(
-        None,
-        description="Country if available"
-    )
-    remote: Optional[str] = Field(
-        None,
-        description="Work arrangement if available"
-    )
+    salary_range: Optional[str] = Field(None, description="Salary range if available")
+    country: Optional[str] = Field(None, description="Country if available")
+    remote: Optional[str] = Field(None, description="Work arrangement if available")
     job_employment_type: Optional[str] = Field(
-        None,
-        description="Employment type if available"
+        None, description="Employment type if available"
     )
-    job_function: Optional[str] = Field(
-        None,
-        description="Job function if available"
-    )
+    job_function: Optional[str] = Field(None, description="Job function if available")
     job_seniority_level: Optional[str] = Field(
-        None,
-        description="Seniority level if available"
+        None, description="Seniority level if available"
     )
-    posted_date: Optional[str] = Field(
-        None,
-        description="Job posting date"
-    )
+    posted_date: Optional[str] = Field(None, description="Job posting date")
     apply_url: str = Field(..., description="Application URL")
     source: str = Field(..., description="Data source (LinkedIn/Glassdoor)")
     match_score: float = Field(
-        ...,
-        ge=0.0,
-        le=100.0,
-        description="AI-calculated match score (0-100)"
+        ..., ge=0.0, le=100.0, description="AI-calculated match score (0-100)"
     )
     match_reason: str = Field(
-        ...,
-        description="AI explanation of why this job is recommended"
+        ..., description="AI explanation of why this job is recommended"
     )
     key_highlights: List[str] = Field(
-        default_factory=list,
-        description="Key highlights of the job posting"
+        default_factory=list, description="Key highlights of the job posting"
     )
     potential_concerns: List[str] = Field(
-        default_factory=list,
-        description="Any potential concerns or mismatches"
+        default_factory=list, description="Any potential concerns or mismatches"
     )
     recommendation: str = Field(
         ...,
-        description="Recommend: 'highly_recommended', 'recommended', 'consider', or 'not_recommended'"
+        description="Recommend: 'highly_recommended', 'recommended', 'consider', or 'not_recommended'",
     )
 
     class Config:
@@ -178,34 +155,40 @@ class JobRecommendation(BaseModel):
                 "location": "Remote",
                 "job_type": "Full-time",
                 "description": "We're looking for an experienced Python developer...",
-                "requirements": ["5+ years Python", "FastAPI experience", "Cloud platforms"],
+                "requirements": [
+                    "5+ years Python",
+                    "FastAPI experience",
+                    "Cloud platforms",
+                ],
                 "salary_range": "$120k - $180k",
                 "posted_date": "2024-11-20",
                 "apply_url": "https://linkedin.com/jobs/123456",
                 "source": "LinkedIn",
                 "match_score": 92.5,
                 "match_reason": "Strong alignment with Python and FastAPI expertise, remote-first company",
-                "key_highlights": ["Remote-first culture", "Competitive salary", "Modern tech stack"]
+                "key_highlights": [
+                    "Remote-first culture",
+                    "Competitive salary",
+                    "Modern tech stack",
+                ],
             }
         }
 
 
 class JobSearchResponse(BaseModel):
     """Response schema for job search"""
+
     success: bool = Field(..., description="Whether the search was successful")
     query: str = Field(..., description="Original search query")
     total_found: int = Field(..., ge=0, description="Total jobs found")
     jobs: List[JobRecommendation] = Field(
-        default_factory=list,
-        description="List of recommended jobs"
+        default_factory=list, description="List of recommended jobs"
     )
     search_metadata: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional search metadata"
+        default_factory=dict, description="Additional search metadata"
     )
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="Response timestamp"
+        default_factory=datetime.utcnow, description="Response timestamp"
     )
 
     class Config:
@@ -218,9 +201,9 @@ class JobSearchResponse(BaseModel):
                 "search_metadata": {
                     "sources": ["LinkedIn", "Glassdoor"],
                     "processing_time_ms": 3500,
-                    "filters_applied": ["experience_level", "job_type"]
+                    "filters_applied": ["experience_level", "job_type"],
                 },
-                "timestamp": "2024-11-24T10:30:00Z"
+                "timestamp": "2024-11-24T10:30:00Z",
             }
         }
 
@@ -228,6 +211,7 @@ class JobSearchResponse(BaseModel):
 # Health Check Schema
 class HealthResponse(BaseModel):
     """Health check response schema"""
+
     status: str = Field(..., description="Service status")
     message: str = Field(..., description="Status message")
     version: str = Field(..., description="API version")
@@ -237,41 +221,43 @@ class HealthResponse(BaseModel):
             "example": {
                 "status": "healthy",
                 "message": "Job Finder API is running",
-                "version": "1.0.0"
+                "version": "1.0.0",
             }
         }
 
 
 # LLM Structured Output Schemas
 
+
 class LLMJobAnalysis(BaseModel):
     """Schema for LLM job analysis structured output"""
+
     relevance_score: float = Field(
         ...,
         ge=0.0,
         le=100.0,
-        description="Job relevance score based on search criteria"
+        description="Job relevance score based on search criteria",
     )
     match_explanation: str = Field(
         ...,
-        min_length=20,
-        max_length=500,
-        description="Detailed explanation of why this job matches"
+        # min_length=20,
+        # max_length=500,
+        description="Detailed explanation of why this job matches",
     )
     key_strengths: List[str] = Field(
         ...,
-        min_items=1,
-        max_items=5,
-        description="Key strengths of this job posting"
+        # min_items=1,
+        # max_items=5,
+        description="Key strengths of this job posting",
     )
     potential_concerns: List[str] = Field(
         default_factory=list,
-        max_items=3,
-        description="Any potential concerns or mismatches"
+        # max_items=3,
+        description="Any potential concerns or mismatches",
     )
     recommendation: str = Field(
         ...,
-        description="Recommend: 'highly_recommended', 'recommended', 'consider', or 'not_recommended'"
+        description="Recommend: 'highly_recommended', 'recommended', 'consider', or 'not_recommended'",
     )
 
     class Config:
@@ -282,10 +268,9 @@ class LLMJobAnalysis(BaseModel):
                 "key_strengths": [
                     "Modern tech stack with FastAPI",
                     "Remote-first company culture",
-                    "Competitive compensation"
+                    "Competitive compensation",
                 ],
                 "potential_concerns": ["May require occasional travel"],
-                "recommendation": "highly_recommended"
+                "recommendation": "highly_recommended",
             }
         }
-
